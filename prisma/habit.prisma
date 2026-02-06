@@ -1,0 +1,15 @@
+model Habit {
+  id        String   @id @default(cuid())
+  name      String
+  reps      Int
+  icon      String?
+  color     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  routineId String?
+  routine   Routine? @relation(fields: [routineId], references: [id], onDelete: SetNull)
+
+  @@map("habit")
+}
