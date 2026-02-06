@@ -78,8 +78,8 @@ function Sidebar() {
   ];
 
   return (
-    <div className='h-screen'>
-      <aside className='flex flex-col items-center bg-gray-900 text-gray-50 shadow h-full border-r border-gray-700'>
+    <div className='h-screen sticky top-0 z-50 bg-gray-800/95 backdrop-blur-md border-b border-gray-700'>
+      <aside className='flex flex-col items-center text-gray-50 shadow h-full border-r border-gray-700'>
         {/* Side Nav Bar*/}
         <div className='h-16 flex items-center w-full border-b border-gray-700'>
           {/* Logo Section */}
