@@ -17,40 +17,10 @@ import {
   FaFire,
   FaCalendar,
 } from 'react-icons/fa';
+import Link from 'next/link';
 import { SiJson } from 'react-icons/si';
 
 export default function HomePage() {
-  const [jsonInput, setJsonInput] = useState(`{
-  "morning_routine": [
-    {
-      "habit": "Drink Water",
-      "time": "7:00 AM",
-      "streak": 14
-    },
-    {
-      "habit": "Meditation",
-      "time": "7:15 AM",
-      "streak": 7
-    }
-  ],
-  "evening_routine": [
-    {
-      "habit": "Read Book",
-      "time": "9:00 PM",
-      "streak": 21
-    }
-  ]
-}`);
-
-  const sampleHabits = [
-    { name: 'Morning Meditation', streak: 14, completed: true },
-    { name: 'Daily Exercise', streak: 21, completed: true },
-    { name: 'Read 30 Pages', streak: 7, completed: false },
-    { name: 'Water 2L', streak: 30, completed: true },
-    { name: 'No Sugar', streak: 3, completed: true },
-    { name: 'Journal', streak: 45, completed: false },
-  ];
-
   return (
     <div className='min-h-screen bg-gray-900 text-gray-100 font-sans'>
       {/* Header */}
@@ -106,9 +76,12 @@ export default function HomePage() {
                 <FaGithub className='text-blue-400' />
                 <span className='hidden sm:inline'>Star on GitHub</span>
               </a>
-              <button className='px-6 py-2 rounded-lg bg-blue-700 hover:bg-blue-600 font-semibold transition-colors duration-200'>
+              <Link
+                href='/dashboard'
+                className='px-6 py-2 rounded-lg bg-blue-700 hover:bg-blue-600 font-semibold transition-colors duration-200'
+              >
                 Try Now
-              </button>
+              </Link>
             </div>
           </div>
         </div>
@@ -198,22 +171,6 @@ export default function HomePage() {
                   Built with feedback from users like you.
                 </p>
               </div>
-            </div>
-
-            <div className='flex flex-col sm:flex-row gap-4 justify-center'>
-              <a
-                href='https://github.com'
-                target='_blank'
-                rel='noopener noreferrer'
-                className='px-8 py-4 rounded-lg border border-gray-700 hover:border-blue-600 font-semibold text-lg transition-colors duration-200 flex items-center justify-center gap-3'
-              >
-                <FaGithub className='text-blue-400' />
-                Star on GitHub
-                <FaStar className='text-yellow-500' />
-              </a>
-              <button className='px-8 py-4 rounded-lg bg-blue-700 hover:bg-blue-600 font-semibold text-lg transition-colors duration-200'>
-                Get Started Now
-              </button>
             </div>
           </div>
         </div>
