@@ -2,37 +2,12 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import {
-  FaHome,
-  FaFire,
-  FaCalendarAlt,
-  FaFileCode,
-  FaChartLine,
-  FaCog,
-  FaDownload,
-  FaSignOutAlt,
-  FaCoffee,
-  FaTrash,
-  FaShoppingCart,
-  FaBell,
-} from 'react-icons/fa';
-import { SiJson } from 'react-icons/si';
+import { FaHome, FaFire, FaSignOutAlt, FaCoffee } from 'react-icons/fa';
 
 function Sidebar() {
-  const pathname = usePathname();
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState('');
 
   // Update active tab based on current path
-  React.useEffect(() => {
-    if (pathname.includes('/dashboard')) setActiveTab('dashboard');
-    else if (pathname.includes('/habits')) setActiveTab('habits');
-    else if (pathname.includes('/routines')) setActiveTab('routines');
-    else if (pathname.includes('/json')) setActiveTab('json');
-    else if (pathname.includes('/analytics')) setActiveTab('analytics');
-    else if (pathname.includes('/settings')) setActiveTab('settings');
-    else if (pathname.includes('/templates')) setActiveTab('templates');
-  }, [pathname]);
 
   const handleTabClick = (tab: string) => {
     setActiveTab(tab);
@@ -49,31 +24,7 @@ function Sidebar() {
       id: 'habits',
       label: 'Habits',
       icon: <FaFire className='h-5 w-5' />,
-      href: '/habits',
-    },
-    {
-      id: 'routines',
-      label: 'Routines',
-      icon: <FaCalendarAlt className='h-5 w-5' />,
-      href: '/routines',
-    },
-    {
-      id: 'json',
-      label: 'JSON Editor',
-      icon: <SiJson className='h-5 w-5' />,
-      href: '/json',
-    },
-    {
-      id: 'analytics',
-      label: 'Analytics',
-      icon: <FaChartLine className='h-5 w-5' />,
-      href: '/analytics',
-    },
-    {
-      id: 'templates',
-      label: 'Templates',
-      icon: <FaFileCode className='h-5 w-5' />,
-      href: '/templates',
+      href: '/dashboard/habits',
     },
   ];
 
