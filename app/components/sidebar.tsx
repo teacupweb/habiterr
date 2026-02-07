@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { FaHome, FaFire, FaSignOutAlt, FaCoffee } from 'react-icons/fa';
+import { authClient } from '@/app/lib/auth-client';
 
 function Sidebar() {
   const [activeTab, setActiveTab] = useState('');
@@ -11,6 +12,15 @@ function Sidebar() {
 
   const handleTabClick = (tab: string) => {
     setActiveTab(tab);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await authClient.signOut();
+      window.location.href = '/';
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
   };
 
   const menuItems = [
@@ -61,10 +71,7 @@ function Sidebar() {
           {/* Action Section */}
           <button
             className='h-16 w-full flex justify-center items-center hover:bg-red-900/20 focus:outline-none focus:text-red-500'
-            onClick={() => {
-              // Logout functionality
-              console.log('Logout clicked');
-            }}
+            onClick={handleLogout}
           >
             <FaSignOutAlt className='h-5 w-5 text-red-500' />
           </button>

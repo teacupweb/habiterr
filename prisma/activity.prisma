@@ -1,0 +1,10 @@
+model Activity {
+  id        String   @id @default(cuid())
+  day       String
+  completed Int
+  total     Int
+  createdAt DateTime @default(now())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@map("activity")
+}
