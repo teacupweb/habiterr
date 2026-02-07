@@ -1,6 +1,15 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { prisma } from '@/app/lib/prisma';
+import {
+  ContributionGraph,
+  ContributionGraphCalendar,
+  ContributionGraphBlock,
+  ContributionGraphFooter,
+  ContributionGraphTotalCount,
+  ContributionGraphLegend,
+} from '@/components/kibo-ui/contribution-graph';
 import {
   FaFire,
   FaTrophy,
@@ -20,26 +29,98 @@ import {
 } from 'react-icons/fa';
 
 const DashboardPage = () => {
-  // Streak data
+  // State for database data - Proper TypeScript types based on schema
+  const [stats, setStats] = useState<{
+    currentStreak: number;
+    longestStreak: number;
+    completion: number;
+  }>({
+    currentStreak: 0,
+    longestStreak: 0,
+    completion: 0,
+  });
+  const [habits, setHabits] = useState<{
+    id: string;
+    name: string;
+    reps: number;
+    icon?: string;
+    color?: string;
+    createdAt: string;
+    updatedAt: string;
+  }[]>([]);
+  const [activities, setActivities] = useState<{
+    id: string;
+    day: string;
+    completed: number;
+    total: number;
+    createdAt: string;
+  }[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch data from database
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // In a real app, you'd fetch the userId from auth
+        const userId = 'user-id-placeholder'; // Replace with actual user ID
+        
+        // Fetch stats, habits, and activities from your API endpoints
+        const [statsResponse, habitsResponse, activitiesResponse] = await Promise.all([
+          fetch('/api/stats'),
+          fetch('/api/habits'),
+          fetch('/api/activities')
+        ]);
+
+        if (statsResponse.ok) {
+          const statsData = await statsResponse.json();
+          setStats(statsData);
+        }
+
+        if (habitsResponse.ok) {
+          const habitsData = await habitsResponse.json();
+          setHabits(habitsData);
+        }
+
+        if (activitiesResponse.ok) {
+          const activitiesData = await activitiesResponse.json();
+          setActivities(activitiesData);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  // Fallback data for demo purposes
   const streakData = {
-    currentStreak: 42,
-    longestStreak: 67,
+    currentStreak: stats.currentStreak || 42,
+    longestStreak: stats.longestStreak || 67,
     totalDaysTracked: 189,
-    completionRate: 87,
+    completionRate: Math.round(stats.completion) || 87,
   };
 
-  // Weekly activity data for the bar chart
-  const weeklyActivity = [
-    { day: 'Mon', completed: 8, total: 12 },
-    { day: 'Tue', completed: 10, total: 12 },
-    { day: 'Wed', completed: 9, total: 12 },
-    { day: 'Thu', completed: 11, total: 12 },
-    { day: 'Fri', completed: 7, total: 12 },
-    { day: 'Sat', completed: 6, total: 12 },
-    { day: 'Sun', completed: 9, total: 12 },
-  ];
+  // Weekly activity data for the bar chart - use database activities or fallback
+  const weeklyActivity = activities.length > 0 
+    ? activities.slice(0, 7).map((activity, index) => ({
+        day: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][index] || activity.day,
+        completed: activity.completed,
+        total: activity.total
+      }))
+    : [
+        { day: 'Mon', completed: 8, total: 12 },
+        { day: 'Tue', completed: 10, total: 12 },
+        { day: 'Wed', completed: 9, total: 12 },
+        { day: 'Thu', completed: 11, total: 12 },
+        { day: 'Fri', completed: 7, total: 12 },
+        { day: 'Sat', completed: 6, total: 12 },
+        { day: 'Sun', completed: 9, total: 12 },
+      ];
 
-  // Contribution-like heatmap data (last 90 days)
+  // Contribution-like heatmap data (last 90 days) - Transform for ContributionGraph
   const generateHeatmapData = () => {
     const data = [];
     const today = new Date();
@@ -49,18 +130,8 @@ const DashboardPage = () => {
       const count = Math.floor(Math.random() * 5); // 0-4 completed habits
       data.push({
         date: date.toISOString().split('T')[0],
-        day: date.toLocaleDateString('en-US', { weekday: 'short' }),
         count,
-        level:
-          count === 0
-            ? 0
-            : count === 1
-              ? 1
-              : count === 2
-                ? 2
-                : count === 3
-                  ? 3
-                  : 4,
+        level: count, // ContributionGraph uses level directly
       });
     }
     return data;
@@ -68,41 +139,66 @@ const DashboardPage = () => {
 
   const heatmapData = generateHeatmapData();
 
-  // Today's habits
-  const todaysHabits = [
-    {
-      id: 1,
-      name: 'Morning Meditation',
-      time: '7:00 AM',
-      completed: true,
-      streak: 14,
-      icon: <FaLeaf className='text-green-500' />,
-    },
-    {
-      id: 2,
-      name: 'Exercise 30min',
-      time: '8:00 AM',
-      completed: true,
-      streak: 21,
-      icon: <FaRunning className='text-blue-500' />,
-    },
-    {
-      id: 3,
-      name: 'Read 30 pages',
-      time: '9:00 PM',
-      completed: false,
-      streak: 7,
-      icon: <FaBook className='text-purple-500' />,
-    },
-    {
-      id: 4,
-      name: 'Drink 2L Water',
-      time: 'All Day',
-      completed: true,
-      streak: 30,
-      icon: <FaWater className='text-cyan-500' />,
-    },
-  ];
+  // Today's habits - use database habits or fallback
+  const todaysHabits = habits.length > 0
+    ? habits.map((habit) => {
+        // Map icon string to React icon component
+        const getIconComponent = (iconName: string) => {
+          const iconMap: { [key: string]: React.ReactNode } = {
+            FaLeaf: <FaLeaf className='text-green-500' />,
+            FaRunning: <FaRunning className='text-blue-500' />,
+            FaBook: <FaBook className='text-purple-500' />,
+            FaWater: <FaWater className='text-cyan-500' />,
+            FaMoon: <FaMoon className='text-indigo-500' />,
+            FaCoffee: <FaCoffee className='text-yellow-600' />,
+            FaMedkit: <FaMedkit className='text-red-500' />,
+          };
+          return iconMap[iconName] || <FaLeaf className='text-green-500' />;
+        };
+
+        return {
+          id: habit.id,
+          name: habit.name,
+          time: 'All Day', // Not in schema, using default
+          completed: false, // Not in schema, will need to be tracked separately
+          streak: 0, // Not in schema, will need to be calculated from activities
+          icon: getIconComponent(habit.icon || 'FaLeaf'),
+        };
+      })
+    : [
+        {
+          id: 1,
+          name: 'Morning Meditation',
+          time: '7:00 AM',
+          completed: true,
+          streak: 14,
+          icon: <FaLeaf className='text-green-500' />,
+        },
+        {
+          id: 2,
+          name: 'Exercise 30min',
+          time: '8:00 AM',
+          completed: true,
+          streak: 21,
+          icon: <FaRunning className='text-blue-500' />,
+        },
+        {
+          id: 3,
+          name: 'Read 30 pages',
+          time: '9:00 PM',
+          completed: false,
+          streak: 7,
+          icon: <FaBook className='text-purple-500' />,
+        },
+        {
+          id: 4,
+          name: 'Drink 2L Water',
+          time: 'All Day',
+          completed: true,
+          streak: 30,
+          icon: <FaWater className='text-cyan-500' />,
+        },
+      ];
 
   // Get completion percentage
   const completedHabits = todaysHabits.filter((h) => h.completed).length;
@@ -119,7 +215,17 @@ const DashboardPage = () => {
           <p className='text-gray-400'>Track your habits and progress</p>
         </div>
 
-        {/* Stats Grid */}
+        {/* Loading State */}
+        {loading && (
+          <div className='flex items-center justify-center py-12'>
+            <div className='text-gray-400'>Loading dashboard data...</div>
+          </div>
+        )}
+
+        {/* Dashboard Content */}
+        {!loading && (
+          <>
+          {/* Stats Grid */}
         <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8'>
           {/* Current Streak Card */}
           <div className='bg-gray-800 rounded-xl p-6 border border-gray-700 hover:border-blue-600 transition-colors'>
@@ -236,7 +342,7 @@ const DashboardPage = () => {
             </div>
 
             {/* GitHub-style Contribution Heatmap */}
-            <div className='bg-gray-800 rounded-xl p-6 border border-gray-700'>
+            <div className='bg-gray-800 rounded-xl p-6 border-gray-700'>
               <div className='flex items-center justify-between mb-6'>
                 <h2 className='text-xl font-bold text-white'>
                   Activity Heatmap
@@ -244,65 +350,51 @@ const DashboardPage = () => {
                 <span className='text-sm text-gray-400'>Last 90 days</span>
               </div>
 
-              <div className='flex items-center gap-1 mb-4'>
-                <span className='text-xs text-gray-400 mr-4'>Less</span>
-                {[0, 1, 2, 3, 4].map((level) => (
-                  <div
-                    key={level}
-                    className={`w-3 h-3 rounded-sm ${
-                      level === 0
-                        ? 'bg-gray-700'
-                        : level === 1
-                          ? 'bg-blue-900/50'
-                          : level === 2
-                            ? 'bg-blue-700'
-                            : level === 3
-                              ? 'bg-blue-500'
-                              : 'bg-blue-400'
-                    }`}
-                  ></div>
-                ))}
-                <span className='text-xs text-gray-400 ml-4'>More</span>
-              </div>
-
-              <div className='grid grid-cols-13 gap-1'>
-                {/* Day labels */}
-                <div className='flex flex-col justify-between h-24 text-xs text-gray-400'>
-                  <span>Mon</span>
-                  <span>Wed</span>
-                  <span>Fri</span>
-                  <span>Sun</span>
-                </div>
-
-                {/* Heatmap grid */}
-                <div className='col-span-12 grid grid-cols-12 gap-1'>
-                  {Array.from({ length: 12 }).map((_, weekIndex) => (
-                    <div key={weekIndex} className='flex flex-col gap-1'>
-                      {Array.from({ length: 7 }).map((_, dayIndex) => {
-                        const dataIndex = weekIndex * 7 + dayIndex;
-                        const dayData = heatmapData[dataIndex];
-                        return (
-                          <div
-                            key={dataIndex}
-                            className={`w-3 h-3 rounded-sm cursor-pointer transition-transform hover:scale-110 ${
-                              dayData?.level === 0
-                                ? 'bg-gray-700'
-                                : dayData?.level === 1
-                                  ? 'bg-blue-900/50'
-                                  : dayData?.level === 2
-                                    ? 'bg-blue-700'
-                                    : dayData?.level === 3
-                                      ? 'bg-blue-500'
-                                      : 'bg-blue-400'
-                            }`}
-                            title={`${dayData?.date}: ${dayData?.count} habits completed`}
-                          ></div>
-                        );
-                      })}
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <ContributionGraph data={heatmapData} className="text-gray-100">
+                <ContributionGraphCalendar>
+                  {({ activity, dayIndex, weekIndex }) => (
+                    <ContributionGraphBlock
+                      activity={activity}
+                      dayIndex={dayIndex}
+                      weekIndex={weekIndex}
+                      className="cursor-pointer transition-colors"
+                      style={{
+                        fill: activity.level === 0
+                          ? '#374151' // gray-700
+                          : activity.level === 1
+                            ? '#1e3a8a' // blue-900/50
+                            : activity.level === 2
+                              ? '#1d4ed8' // blue-700
+                              : activity.level === 3
+                                ? '#3b82f6' // blue-500
+                                : '#60a5fa', // blue-400
+                      }}
+                      title={`${activity.date}: ${activity.count} habits completed`}
+                    />
+                  )}
+                </ContributionGraphCalendar>
+                <ContributionGraphFooter className="mt-4">
+                  <ContributionGraphTotalCount className="text-gray-400" />
+                  <ContributionGraphLegend>
+                    {({ level }) => (
+                      <div
+                        className="w-3 h-3 rounded-sm"
+                        style={{
+                          fill: level === 0
+                            ? '#374151' // gray-700
+                            : level === 1
+                              ? '#1e3a8a' // blue-900/50
+                              : level === 2
+                                ? '#1d4ed8' // blue-700
+                                : level === 3
+                                  ? '#3b82f6' // blue-500
+                                  : '#60a5fa', // blue-400
+                        }}
+                      />
+                    )}
+                  </ContributionGraphLegend>
+                </ContributionGraphFooter>
+              </ContributionGraph>
             </div>
           </div>
 
@@ -362,28 +454,8 @@ const DashboardPage = () => {
           </div>
         </div>
 
-        {/* Bottom Section */}
-        <div className='mt-8 bg-gray-800 rounded-xl p-6 border border-gray-700'>
-          <h2 className='text-xl font-bold text-white mb-6'>Quick Stats</h2>
-          <div className='grid grid-cols-2 md:grid-cols-4 gap-6'>
-            <div className='text-center'>
-              <div className='text-2xl font-bold text-blue-400'>12</div>
-              <div className='text-sm text-gray-400'>Active Habits</div>
-            </div>
-            <div className='text-center'>
-              <div className='text-2xl font-bold text-green-400'>87%</div>
-              <div className='text-sm text-gray-400'>Weekly Average</div>
-            </div>
-            <div className='text-center'>
-              <div className='text-2xl font-bold text-purple-400'>28</div>
-              <div className='text-sm text-gray-400'>Perfect Days</div>
-            </div>
-            <div className='text-center'>
-              <div className='text-2xl font-bold text-yellow-400'>15</div>
-              <div className='text-sm text-gray-400'>Achievements</div>
-            </div>
-          </div>
-        </div>
+        </>
+        )}
       </div>
     </div>
   );

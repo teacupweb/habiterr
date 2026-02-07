@@ -26,6 +26,7 @@ model User {
   routines      Routine[]
   habits        Habit[]
   activities    Activity[]
+  stats         Stats[]
   @@unique([email])
   @@map("user")
 }

@@ -45,52 +45,8 @@ interface Routine {
 }
 
 const HabitTracker = () => {
-  const [habits, setHabits] = useState<Habit[]>([
-    {
-      id: '1',
-      name: 'Morning Meditation',
-      repsPerDay: 1,
-      icon: 'FaBrain',
-      color: '#10B981',
-      currentStreak: 14,
-      completedToday: true,
-      createdAt: '2024-01-15',
-      updatedAt: '2024-03-15',
-    },
-    {
-      id: '2',
-      name: 'Exercise',
-      repsPerDay: 1,
-      icon: 'FaRunning',
-      color: '#3B82F6',
-      currentStreak: 21,
-      completedToday: false,
-      createdAt: '2024-01-20',
-      updatedAt: '2024-03-15',
-    },
-    {
-      id: '3',
-      name: 'Read',
-      repsPerDay: 30,
-      icon: 'FaBook',
-      color: '#8B5CF6',
-      currentStreak: 7,
-      completedToday: false,
-      createdAt: '2024-02-01',
-      updatedAt: '2024-03-15',
-    },
-    {
-      id: '4',
-      name: 'Drink Water',
-      repsPerDay: 8,
-      icon: 'FaWater',
-      color: '#06B6D4',
-      currentStreak: 45,
-      completedToday: true,
-      createdAt: '2023-12-01',
-      updatedAt: '2024-03-15',
-    },
-  ]);
+  const [habits, setHabits] = useState<Habit[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newHabit, setNewHabit] = useState({
@@ -129,37 +85,75 @@ const HabitTracker = () => {
     '#6366F1',
   ];
 
-  // Load from localStorage on mount
+  // Fetch habits from database
   useEffect(() => {
-    const savedHabits = localStorage.getItem('habiterr-habits');
-    if (savedHabits) {
-      setHabits(JSON.parse(savedHabits));
-    }
-  }, []);
-
-  // Save to localStorage when habits change
-  useEffect(() => {
-    localStorage.setItem('habiterr-habits', JSON.stringify(habits));
-  }, [habits]);
-
-  const handleCreateHabit = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    const habit: Habit = {
-      id: Date.now().toString(),
-      name: newHabit.name,
-      repsPerDay: newHabit.repsPerDay,
-      icon: newHabit.icon,
-      color: newHabit.color,
-      currentStreak: 0,
-      completedToday: false,
-      createdAt: new Date().toISOString().split('T')[0],
-      updatedAt: new Date().toISOString().split('T')[0],
+    const fetchHabits = async () => {
+      try {
+        const response = await fetch('/api/habits');
+        if (response.ok) {
+          const habitsData = await response.json();
+          // Transform database data to match the Habit interface
+          const transformedHabits = habitsData.map((habit: any) => ({
+            id: habit.id,
+            name: habit.name,
+            repsPerDay: habit.reps,
+            icon: habit.icon || 'FaStar',
+            color: habit.color || '#3B82F6',
+            currentStreak: 0, // You'll need to calculate this from activities
+            completedToday: false, // You'll need to track this
+            createdAt: habit.createdAt,
+            updatedAt: habit.updatedAt,
+          }));
+          setHabits(transformedHabits);
+        }
+      } catch (error) {
+        console.error('Error fetching habits:', error);
+      } finally {
+        setLoading(false);
+      }
     };
 
-    setHabits([...habits, habit]);
-    setNewHabit({ name: '', repsPerDay: 1, icon: 'FaStar', color: '#3B82F6' });
-    setShowCreateModal(false);
+    fetchHabits();
+  }, []);
+
+  const handleCreateHabit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    try {
+      const response = await fetch('/api/habits', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: newHabit.name,
+          reps: newHabit.repsPerDay,
+          icon: newHabit.icon,
+          color: newHabit.color,
+          // userId will need to be added from auth context
+        }),
+      });
+
+      if (response.ok) {
+        const createdHabit = await response.json();
+        const habit: Habit = {
+          id: createdHabit.id,
+          name: createdHabit.name,
+          repsPerDay: createdHabit.reps,
+          icon: createdHabit.icon,
+          color: createdHabit.color,
+          currentStreak: 0,
+          completedToday: false,
+          createdAt: createdHabit.createdAt,
+          updatedAt: createdHabit.updatedAt,
+        };
+        setHabits([...habits, habit]);
+        setNewHabit({ name: '', repsPerDay: 1, icon: 'FaStar', color: '#3B82F6' });
+        setShowCreateModal(false);
+      }
+    } catch (error) {
+      console.error('Error creating habit:', error);
+    }
   };
 
   const handleToggleComplete = (id: string) => {
@@ -183,9 +177,19 @@ const HabitTracker = () => {
     );
   };
 
-  const handleDeleteHabit = (id: string) => {
+  const handleDeleteHabit = async (id: string) => {
     if (confirm('Are you sure you want to delete this habit?')) {
-      setHabits(habits.filter((habit) => habit.id !== id));
+      try {
+        const response = await fetch(`/api/habits/${id}`, {
+          method: 'DELETE',
+        });
+
+        if (response.ok) {
+          setHabits(habits.filter((habit) => habit.id !== id));
+        }
+      } catch (error) {
+        console.error('Error deleting habit:', error);
+      }
     }
   };
 
@@ -215,7 +219,7 @@ const HabitTracker = () => {
           <div>
             <h1 className='text-2xl font-bold text-white'>Habit Tracker</h1>
             <p className='text-gray-400 text-sm'>
-              Track your daily habits • Local Storage
+              Track your daily habits • Database Connected
             </p>
           </div>
 
@@ -228,8 +232,17 @@ const HabitTracker = () => {
           </button>
         </div>
 
-        {/* Stats Bar - Full width grid */}
-        <div className='w-full grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6'>
+        {/* Loading State */}
+        {loading && (
+          <div className='w-full text-center py-12'>
+            <div className='text-gray-400'>Loading habits...</div>
+          </div>
+        )}
+
+        {/* Content */}
+        {!loading && (
+          <>
+          <div className='w-full grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6'>
           <div className='w-full bg-gray-800 rounded-lg p-3 border border-gray-700'>
             <div className='text-sm text-gray-400'>Total Habits</div>
             <div className='text-xl font-bold text-white'>{habits.length}</div>
@@ -356,9 +369,11 @@ const HabitTracker = () => {
             </tbody>
           </table>
         </div>
+        </>
+        )}
 
-        {/* Empty State */}
-        {habits.length === 0 && (
+        {/* Empty State - Show when not loading and no habits */}
+        {!loading && habits.length === 0 && (
           <div className='w-full text-center py-12'>
             <div className='inline-flex p-4 rounded-full bg-gray-800 mb-4'>
               <FaPlus className='text-3xl text-gray-400' />
@@ -380,9 +395,9 @@ const HabitTracker = () => {
         {/* Storage Info */}
         <div className='w-full mt-6 text-center'>
           <p className='text-xs text-gray-500'>
-            Data is stored locally in your browser •
+            Data is synced with database •
             <span className='ml-1 text-blue-400'>
-              {habits.length} habits saved
+              {habits.length} habits loaded
             </span>
           </p>
         </div>
