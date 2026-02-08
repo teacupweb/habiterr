@@ -55,6 +55,7 @@ const HabitTracker = () => {
     icon: 'FaStar',
     color: '#3B82F6',
   });
+  const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
 
   // Icons mapping
   const icons = [
@@ -155,6 +156,48 @@ const HabitTracker = () => {
     } catch (error) {
       console.error('Error creating habit:', error);
     }
+  };
+
+  const handleUpdateHabit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingHabit) return;
+
+    try {
+      const response = await fetch(`/api/habits/${editingHabit.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: editingHabit.name,
+          reps: editingHabit.repsPerDay,
+          icon: editingHabit.icon,
+          color: editingHabit.color,
+        }),
+      });
+
+      if (response.ok) {
+        const updatedHabitData = await response.json();
+        const updatedHabit: Habit = {
+          ...editingHabit,
+          name: updatedHabitData.name,
+          repsPerDay: updatedHabitData.reps,
+          icon: updatedHabitData.icon,
+          color: updatedHabitData.color,
+          updatedAt: updatedHabitData.updatedAt,
+        };
+        setHabits(habits.map((h) => (h.id === updatedHabit.id ? updatedHabit : h)));
+        setEditingHabit(null);
+        setShowCreateModal(false);
+      }
+    } catch (error) {
+      console.error('Error updating habit:', error);
+    }
+  };
+
+  const handleEditHabit = (habit: Habit) => {
+    setEditingHabit(habit);
+    setShowCreateModal(true);
   };
 
   const handleToggleComplete = async (id: string) => {
@@ -408,7 +451,10 @@ const HabitTracker = () => {
                   </td>
                   <td className='py-3 px-4 sm:px-6'>
                     <div className='flex items-center gap-2'>
-                      <button className='p-2 hover:bg-gray-700 rounded-lg transition-colors flex-shrink-0'>
+                      <button 
+                        onClick={() => handleEditHabit(habit)}
+                        className='p-2 hover:bg-gray-700 rounded-lg transition-colors flex-shrink-0'
+                      >
                         <FaEdit className='text-blue-400 text-sm' />
                       </button>
                       <button
@@ -464,18 +510,21 @@ const HabitTracker = () => {
           <div className='w-full bg-gray-800 rounded-xl border border-gray-700 max-w-full sm:max-w-2xl mx-auto'>
             <div className='p-6'>
               <div className='flex items-center justify-between mb-6'>
-                <h2 className='text-xl font-bold text-white'>
-                  Create New Habit
-                </h2>
-                <button
-                  onClick={() => setShowCreateModal(false)}
-                  className='p-2 hover:bg-gray-700 rounded-lg transition-colors text-xl'
-                >
-                  ×
-                </button>
+                  <h2 className='text-xl font-bold text-white'>
+                    {editingHabit ? 'Edit Habit' : 'Create New Habit'}
+                  </h2>
+                  <button
+                    onClick={() => {
+                      setShowCreateModal(false);
+                      setEditingHabit(null);
+                    }}
+                    className='p-2 hover:bg-gray-700 rounded-lg transition-colors text-xl'
+                  >
+                    ×
+                  </button>
               </div>
 
-              <form onSubmit={handleCreateHabit}>
+              <form onSubmit={editingHabit ? handleUpdateHabit : handleCreateHabit}>
                 <div className='space-y-4 mb-6'>
                   {/* Habit Name */}
                   <div>
@@ -484,9 +533,11 @@ const HabitTracker = () => {
                     </label>
                     <input
                       type='text'
-                      value={newHabit.name}
+                      value={editingHabit ? editingHabit.name : newHabit.name}
                       onChange={(e) =>
-                        setNewHabit({ ...newHabit, name: e.target.value })
+                        editingHabit 
+                          ? setEditingHabit({ ...editingHabit, name: e.target.value })
+                          : setNewHabit({ ...newHabit, name: e.target.value })
                       }
                       className='w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-blue-500 text-sm'
                       placeholder='e.g., Morning Meditation'
@@ -504,13 +555,13 @@ const HabitTracker = () => {
                       type='number'
                       min='1'
                       max='100'
-                      value={newHabit.repsPerDay}
-                      onChange={(e) =>
-                        setNewHabit({
-                          ...newHabit,
-                          repsPerDay: parseInt(e.target.value) || 1,
-                        })
-                      }
+                      value={editingHabit ? editingHabit.repsPerDay : newHabit.repsPerDay}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value) || 1;
+                        editingHabit
+                          ? setEditingHabit({ ...editingHabit, repsPerDay: val })
+                          : setNewHabit({ ...newHabit, repsPerDay: val });
+                      }}
                       className='w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-blue-500 text-sm'
                       required
                     />
@@ -528,17 +579,19 @@ const HabitTracker = () => {
                           key={icon.id}
                           type='button'
                           onClick={() =>
-                            setNewHabit({ ...newHabit, icon: icon.id })
+                            editingHabit
+                              ? setEditingHabit({ ...editingHabit, icon: icon.id })
+                              : setNewHabit({ ...newHabit, icon: icon.id })
                           }
                           className={`p-3 rounded-lg border flex flex-col items-center justify-center transition-colors ${
-                            newHabit.icon === icon.id
+                            (editingHabit ? editingHabit.icon : newHabit.icon) === icon.id
                               ? 'border-blue-500 bg-blue-900/20'
                               : 'border-gray-700 bg-gray-700/50 hover:border-gray-600'
                           }`}
                         >
                           <div
                             className='text-lg mb-1'
-                            style={{ color: newHabit.color }}
+                            style={{ color: editingHabit ? editingHabit.color : newHabit.color }}
                           >
                             {icon.component}
                           </div>
@@ -561,9 +614,13 @@ const HabitTracker = () => {
                         <button
                           key={color}
                           type='button'
-                          onClick={() => setNewHabit({ ...newHabit, color })}
+                          onClick={() => 
+                            editingHabit
+                              ? setEditingHabit({ ...editingHabit, color })
+                              : setNewHabit({ ...newHabit, color })
+                          }
                           className={`w-10 h-10 rounded-lg border-2 transition-transform ${
-                            newHabit.color === color
+                            (editingHabit ? editingHabit.color : newHabit.color) === color
                               ? 'border-white scale-110'
                               : 'border-gray-700 hover:border-gray-600'
                           }`}
@@ -578,7 +635,10 @@ const HabitTracker = () => {
                 <div className='flex gap-3'>
                   <button
                     type='button'
-                    onClick={() => setShowCreateModal(false)}
+                    onClick={() => {
+                      setShowCreateModal(false);
+                      setEditingHabit(null);
+                    }}
                     className='flex-1 py-2 border border-gray-600 hover:border-gray-500 rounded-lg font-medium transition-colors text-sm'
                   >
                     Cancel
@@ -587,7 +647,7 @@ const HabitTracker = () => {
                     type='submit'
                     className='flex-1 py-2 bg-blue-700 hover:bg-blue-600 rounded-lg font-medium transition-colors text-sm'
                   >
-                    Create Habit
+                    {editingHabit ? 'Update Habit' : 'Create Habit'}
                   </button>
                 </div>
               </form>

@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import useAuth from '../../session';
 import { prisma } from '@/app/lib/prisma';
-export async function PATCH(request: Request) {
-  //   return new Response(null, { status: 200 });
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ habitId: string }> }
+) {
+  const { habitId } = await params;
   const session = await useAuth();
   const body = await request.json();
   const data = await prisma.habit.update({
     where: {
-      id: body.id,
+      id: habitId,
       userId: session.user.id,
     },
     data: {
@@ -15,6 +18,21 @@ export async function PATCH(request: Request) {
       reps: body.reps,
       icon: body.icon,
       color: body.color,
+    },
+  });
+  return NextResponse.json(data);
+}
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ habitId: string }> }
+) {
+  const { habitId } = await params;
+  const session = await useAuth();
+  const data = await prisma.habit.delete({
+    where: {
+      id: habitId,
+      userId: session.user.id,
     },
   });
   return NextResponse.json(data);

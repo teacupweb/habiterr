@@ -28,6 +28,35 @@ export async function POST(request: NextRequest) {
   return NextResponse.json(data);
 }
 
+export async function PUT(request: NextRequest) {
+  const session = await useAuth();
+  const body = await request.json();
+  const { id } = body;
+  
+  if (!id) {
+    return NextResponse.json({ error: 'ID is required' }, { status: 400 });
+  }
+
+  const data = await prisma.habit.update({
+    where: {
+      id,
+      userId: session.user.id,
+    },
+    data: {
+      name: body.name,
+      reps: body.reps,
+      icon: body.icon,
+      color: body.color,
+    },
+  });
+  
+  if (!data) {
+    return NextResponse.json({ error: 'Habit not found' }, { status: 404 });
+  }
+  
+  return NextResponse.json(data);
+}
+
 export async function DELETE(request: NextRequest) {
   const session = await useAuth();
   const { searchParams } = new URL(request.url);

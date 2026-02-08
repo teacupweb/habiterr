@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   FaCheckCircle,
   FaTimesCircle,
   FaCalendarCheck,
+  FaEdit,
+  FaTrash,
 } from 'react-icons/fa';
 
 interface Habit {
@@ -25,6 +27,53 @@ const TodaysHabits: React.FC<TodaysHabitsProps> = ({
   completedHabits,
   completionPercentage,
 }) => {
+  const [editingHabit, setEditingHabit] = useState<string | null>(null);
+
+  const handleEdit = (habitId: string) => {
+    setEditingHabit(habitId);
+    // TODO: Open edit modal/form
+  };
+
+  const handleDelete = async (habitId: string) => {
+    if (window.confirm('Are you sure you want to delete this habit?')) {
+      try {
+        const response = await fetch(`/api/habits?id=${habitId}`, {
+          method: 'DELETE',
+        });
+        
+        if (response.ok) {
+          // TODO: Refresh habits list
+          window.location.reload();
+        } else {
+          console.error('Failed to delete habit');
+        }
+      } catch (error) {
+        console.error('Error deleting habit:', error);
+      }
+    }
+  };
+
+  const handleSaveEdit = async (habitId: string, updatedData: Partial<Habit>) => {
+    try {
+      const response = await fetch('/api/habits', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ id: habitId, ...updatedData }),
+      });
+      
+      if (response.ok) {
+        setEditingHabit(null);
+        // TODO: Refresh habits list
+        window.location.reload();
+      } else {
+        console.error('Failed to update habit');
+      }
+    } catch (error) {
+      console.error('Error updating habit:', error);
+    }
+  };
   return (
     <div className='bg-gray-800 rounded-xl p-6 border border-gray-700 h-full flex flex-col'>
       <div className='flex items-center justify-between mb-6'>
@@ -67,6 +116,22 @@ const TodaysHabits: React.FC<TodaysHabitsProps> = ({
                   <span className='text-sm text-blue-400 font-semibold'>
                     {habit.streak} days
                   </span>
+                  <div className='flex items-center gap-1'>
+                    <button
+                      onClick={() => handleEdit(habit.id)}
+                      className='text-gray-400 hover:text-blue-400 transition-colors p-1'
+                      title='Edit habit'
+                    >
+                      <FaEdit className='text-sm' />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(habit.id)}
+                      className='text-gray-400 hover:text-red-400 transition-colors p-1'
+                      title='Delete habit'
+                    >
+                      <FaTrash className='text-sm' />
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
