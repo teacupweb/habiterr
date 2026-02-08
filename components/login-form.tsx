@@ -53,7 +53,7 @@ export default function AuthForm({
       : { name: '', email: '', password: '' },
   });
 
-  const onSubmit = async (data: any) => {
+  const onSubmit: SubmitHandler<Inputs> = async (data) => {
     console.log(data);
     setIsLoading(true);
     try {

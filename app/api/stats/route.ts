@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import useAuth from '../session';
+import getSession from '../session';
 import { prisma } from '@/app/lib/prisma';
 
 export async function GET(request: NextRequest) {
-  const session = await useAuth();
+  const session = await getSession();
   
   // Get the most recent stats record for the user
   const stats = await prisma.stats.findFirst({
@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const session = await useAuth();
+  const session = await getSession();
   const body = await request.json();
   const data = await prisma.stats.create({
     data: {

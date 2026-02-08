@@ -96,7 +96,7 @@ const HabitTracker = () => {
           // Ensure habitsData is an array
           const habitsArray = Array.isArray(habitsData) ? habitsData : [];
           // Transform database data to match the Habit interface
-          const transformedHabits = habitsArray.map((habit: any) => ({
+          const transformedHabits = habitsArray.map((habit: { id: string; name: string; reps: number; icon?: string; color?: string; createdAt: string; updatedAt: string }) => ({
             id: habit.id,
             name: habit.name,
             repsPerDay: habit.reps,
@@ -230,7 +230,7 @@ const HabitTracker = () => {
       const existingActivityResponse = await fetch(`/api/activity?day=${today}`);
       if (existingActivityResponse.ok) {
         const activities = await existingActivityResponse.json();
-        const existingActivity = activities.find((a: any) => a.day === today);
+        const existingActivity = activities.find((a: { day: string; id: string; completed: number }) => a.day === today);
         
         if (existingActivity) {
           // Update existing activity

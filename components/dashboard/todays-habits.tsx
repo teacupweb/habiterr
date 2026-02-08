@@ -77,7 +77,7 @@ const TodaysHabits: React.FC<TodaysHabitsProps> = ({
   return (
     <div className='bg-gray-800 rounded-xl p-6 border border-gray-700 h-full flex flex-col'>
       <div className='flex items-center justify-between mb-6'>
-        <h2 className='text-xl font-bold text-white'>Today's Habits</h2>
+        <h2 className='text-xl font-bold text-white'>Today&apos;s Habits</h2>
         <div className='flex items-center gap-2'>
           <span className='text-sm text-gray-400'>
             {completedHabits}/{todaysHabits.length}

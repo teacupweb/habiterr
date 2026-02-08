@@ -3,7 +3,7 @@ import React from 'react';
 import { authClient } from '../lib/auth-client';
 import { redirect } from 'next/navigation';
 
-interface Props {}
+type Props = Record<string, never>;
 
 function Verify(props: Props) {
   const {} = props;

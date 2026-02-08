@@ -2,7 +2,7 @@ import React from 'react';
 import Sidebar from './../components/sidebar';
 import Verify from './verify';
 
-function Layout({ children }: any) {
+function Layout({ children }: { children: React.ReactNode }) {
   return (
     <>
       <Verify />

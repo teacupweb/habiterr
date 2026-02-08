@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import useAuth from '../session';
+import getSession from '../session';
 import { prisma } from '@/app/lib/prisma';
 
 export async function GET(request: NextRequest) {
-  const session = await useAuth();
+  const session = await getSession();
   const data = await prisma.habit.findMany({
     where: {
       userId: session.user.id,
@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const session = await useAuth();
+  const session = await getSession();
   const body = await request.json();
   const data = await prisma.habit.create({
     data: {
@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
-  const session = await useAuth();
+  const session = await getSession();
   const body = await request.json();
   const { id } = body;
   
@@ -58,7 +58,7 @@ export async function PUT(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  const session = await useAuth();
+  const session = await getSession();
   const { searchParams } = new URL(request.url);
   const id = searchParams.get('id');
   
