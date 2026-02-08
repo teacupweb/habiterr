@@ -21,7 +21,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { signIn, signUp } from '@/app/lib/auth-client';
+import { authClient } from '@/app/lib/auth-client';
 
 interface AuthFormProps {
   variant: 'login' | 'signup';
@@ -58,7 +58,7 @@ export default function AuthForm({
     setIsLoading(true);
     try {
       if (isLogin) {
-        const result = await signIn.email({
+        const result = await authClient.signIn.email({
           email: data.email,
           password: data.password,
         });
@@ -72,7 +72,7 @@ export default function AuthForm({
           router.push('/dashboard');
         }
       } else {
-        const result = await signUp.email({
+        const result = await authClient.signUp.email({
           email: data.email,
           password: data.password,
           name: data.name,

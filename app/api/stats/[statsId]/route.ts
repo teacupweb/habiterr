@@ -4,7 +4,7 @@ import { prisma } from '@/app/lib/prisma';
 export async function PATCH(request: Request) {
   const session = await useAuth();
   const body = await request.json();
-  const data = prisma.stats.update({
+  const data = await prisma.stats.update({
     where: {
       id: body.id,
       userId: session.user.id,

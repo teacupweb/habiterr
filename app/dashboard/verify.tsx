@@ -1,13 +1,13 @@
 'use client';
 import React from 'react';
-import { useSession } from '../lib/auth-client';
+import { authClient } from '../lib/auth-client';
 import { redirect } from 'next/navigation';
 
 interface Props {}
 
 function Verify(props: Props) {
   const {} = props;
-  const { data: session, isPending } = useSession();
+  const { data: session, isPending } = authClient.useSession();
 
   if (isPending) {
     return (

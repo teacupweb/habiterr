@@ -92,8 +92,10 @@ const HabitTracker = () => {
         const response = await fetch('/api/habits');
         if (response.ok) {
           const habitsData = await response.json();
+          // Ensure habitsData is an array
+          const habitsArray = Array.isArray(habitsData) ? habitsData : [];
           // Transform database data to match the Habit interface
-          const transformedHabits = habitsData.map((habit: any) => ({
+          const transformedHabits = habitsArray.map((habit: any) => ({
             id: habit.id,
             name: habit.name,
             repsPerDay: habit.reps,
@@ -130,7 +132,6 @@ const HabitTracker = () => {
           reps: newHabit.repsPerDay,
           icon: newHabit.icon,
           color: newHabit.color,
-          // userId will need to be added from auth context
         }),
       });
 
@@ -156,25 +157,79 @@ const HabitTracker = () => {
     }
   };
 
-  const handleToggleComplete = (id: string) => {
-    setHabits(
-      habits.map((habit) => {
-        if (habit.id === id) {
-          const wasCompleted = habit.completedToday;
-          const newStreak = wasCompleted
-            ? Math.max(0, habit.currentStreak - 1)
-            : habit.currentStreak + 1;
+  const handleToggleComplete = async (id: string) => {
+    const habit = habits.find(h => h.id === id);
+    if (!habit) return;
 
+    const wasCompleted = habit.completedToday;
+    const newStreak = wasCompleted
+      ? Math.max(0, habit.currentStreak - 1)
+      : habit.currentStreak + 1;
+
+    // Update local state immediately for responsiveness
+    setHabits(
+      habits.map((h) => {
+        if (h.id === id) {
           return {
-            ...habit,
+            ...h,
             completedToday: !wasCompleted,
             currentStreak: newStreak,
             updatedAt: new Date().toISOString().split('T')[0],
           };
         }
-        return habit;
+        return h;
       }),
     );
+
+    // Create or update activity record
+    const today = new Date().toISOString().split('T')[0];
+    try {
+      const existingActivityResponse = await fetch(`/api/activity?day=${today}`);
+      if (existingActivityResponse.ok) {
+        const activities = await existingActivityResponse.json();
+        const existingActivity = activities.find((a: any) => a.day === today);
+        
+        if (existingActivity) {
+          // Update existing activity
+          await fetch(`/api/activity/${existingActivity.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: existingActivity.id,
+              completed: wasCompleted ? Math.max(0, existingActivity.completed - 1) : existingActivity.completed + 1,
+              total: habits.length,
+            }),
+          });
+        } else {
+          // Create new activity
+          await fetch('/api/activity', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              day: today,
+              completed: wasCompleted ? 0 : 1,
+              total: habits.length,
+            }),
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error updating activity:', error);
+      // Revert state on error
+      setHabits(
+        habits.map((h) => {
+          if (h.id === id) {
+            return {
+              ...h,
+              completedToday: wasCompleted,
+              currentStreak: habit.currentStreak,
+              updatedAt: habit.updatedAt,
+            };
+          }
+          return h;
+        }),
+      );
+    }
   };
 
   const handleDeleteHabit = async (id: string) => {
@@ -212,12 +267,12 @@ const HabitTracker = () => {
   };
 
   return (
-    <div className='min-h-screen container bg-gray-900 text-gray-100 p-4'>
-      <div className='max-w-7xl min-w-5xl mx-auto'>
+    <div className='min-h-screen bg-gray-900 text-gray-100 p-4 sm:p-6 lg:p-8'>
+      <div className='w-full max-w-full sm:max-w-full md:max-w-full lg:max-w-full xl:max-w-7xl mx-auto h-full w-full'>
         {/* Header */}
-        <div className='flex flex-col md:flex-row md:items-center justify-between mb-8'>
+        <div className='flex flex-col md:flex-row md:items-center justify-between mb-6 sm:mb-8'>
           <div>
-            <h1 className='text-2xl font-bold text-white'>Habit Tracker</h1>
+            <h1 className='text-xl sm:text-2xl font-bold text-white'>Habit Tracker</h1>
             <p className='text-gray-400 text-sm'>
               Track your daily habits • Database Connected
             </p>
@@ -225,7 +280,7 @@ const HabitTracker = () => {
 
           <button
             onClick={() => setShowCreateModal(true)}
-            className='mt-4 md:mt-0 px-4 py-2 bg-blue-700 hover:bg-blue-600 rounded-lg font-medium flex items-center gap-2 transition-colors text-sm'
+            className='mt-4 md:mt-0 px-4 py-2 bg-blue-700 hover:bg-blue-600 rounded-lg font-medium flex items-center gap-2 transition-colors text-sm whitespace-nowrap'
           >
             <FaPlus />
             Add Habit
@@ -242,26 +297,26 @@ const HabitTracker = () => {
         {/* Content */}
         {!loading && (
           <>
-          <div className='w-full grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6'>
-          <div className='w-full bg-gray-800 rounded-lg p-3 border border-gray-700'>
-            <div className='text-sm text-gray-400'>Total Habits</div>
-            <div className='text-xl font-bold text-white'>{habits.length}</div>
+          <div className='w-full h-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6'>
+          <div className='w-full h-full bg-gray-800 rounded-lg p-4 sm:p-6 border border-gray-700 flex flex-col justify-between'>
+            <div className='w-full text-sm text-gray-400'>Total Habits</div>
+            <div className='w-full text-xl sm:text-2xl font-bold text-white'>{habits.length}</div>
           </div>
-          <div className='w-full bg-gray-800 rounded-lg p-3 border border-gray-700'>
-            <div className='text-sm text-gray-400'>Today</div>
-            <div className='text-xl font-bold text-white'>
+          <div className='w-full h-full bg-gray-800 rounded-lg p-4 sm:p-6 border border-gray-700 flex flex-col justify-between'>
+            <div className='w-full text-sm text-gray-400'>Today</div>
+            <div className='w-full text-xl sm:text-2xl font-bold text-white'>
               {habits.filter((h) => h.completedToday).length}/{habits.length}
             </div>
           </div>
-          <div className='w-full bg-gray-800 rounded-lg p-3 border border-gray-700'>
-            <div className='text-sm text-gray-400'>Best Streak</div>
-            <div className='text-xl font-bold text-white'>
+          <div className='w-full h-full bg-gray-800 rounded-lg p-4 sm:p-6 border border-gray-700 flex flex-col justify-between'>
+            <div className='w-full text-sm text-gray-400'>Best Streak</div>
+            <div className='w-full text-xl sm:text-2xl font-bold text-white'>
               {Math.max(...habits.map((h) => h.currentStreak), 0)}
             </div>
           </div>
-          <div className='w-full bg-gray-800 rounded-lg p-3 border border-gray-700'>
-            <div className='text-sm text-gray-400'>Total Reps</div>
-            <div className='text-xl font-bold text-white'>
+          <div className='w-full h-full bg-gray-800 rounded-lg p-4 sm:p-6 border border-gray-700 flex flex-col justify-between'>
+            <div className='w-full text-sm text-gray-400'>Total Reps</div>
+            <div className='w-full text-xl sm:text-2xl font-bold text-white'>
               {habits.reduce((sum, h) => sum + h.repsPerDay, 0)}
             </div>
           </div>
@@ -269,22 +324,22 @@ const HabitTracker = () => {
 
         {/* Full Width Table */}
         <div className='w-full bg-gray-800 rounded-xl border border-gray-700 overflow-x-auto'>
-          <table className='w-full min-w-full'>
+          <table className='w-full min-w-[600px]'>
             <thead className='bg-gray-700/50'>
               <tr>
-                <th className='py-3 px-6 text-left text-gray-300 font-medium text-sm w-2/5'>
+                <th className='py-3 px-4 sm:px-6 text-left text-gray-300 font-medium text-sm'>
                   Habit
                 </th>
-                <th className='py-3 px-6 text-left text-gray-300 font-medium text-sm'>
+                <th className='py-3 px-4 sm:px-6 text-left text-gray-300 font-medium text-sm hidden sm:table-cell'>
                   Reps/Day
                 </th>
-                <th className='py-3 px-6 text-left text-gray-300 font-medium text-sm'>
+                <th className='py-3 px-4 sm:px-6 text-left text-gray-300 font-medium text-sm hidden md:table-cell'>
                   Streak
                 </th>
-                <th className='py-3 px-6 text-left text-gray-300 font-medium text-sm'>
+                <th className='py-3 px-4 sm:px-6 text-left text-gray-300 font-medium text-sm'>
                   Today
                 </th>
-                <th className='py-3 px-6 text-left text-gray-300 font-medium text-sm'>
+                <th className='py-3 px-4 sm:px-6 text-left text-gray-300 font-medium text-sm'>
                   Actions
                 </th>
               </tr>
@@ -297,7 +352,7 @@ const HabitTracker = () => {
                     index % 2 === 0 ? 'bg-gray-800' : 'bg-gray-800/50'
                   }`}
                 >
-                  <td className='py-3 px-6'>
+                  <td className='py-3 px-4 sm:px-6'>
                     <div className='flex items-center gap-3 min-w-0'>
                       <div
                         className='w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0'
@@ -307,17 +362,17 @@ const HabitTracker = () => {
                           {getIconComponent(habit.icon)}
                         </div>
                       </div>
-                      <div className='min-w-0'>
+                      <div className='min-w-0 flex-1'>
                         <div className='font-medium text-white truncate'>
                           {habit.name}
                         </div>
-                        <div className='text-xs text-gray-400 truncate'>
+                        <div className='text-xs text-gray-400 truncate hidden sm:block'>
                           Created: {habit.createdAt}
                         </div>
                       </div>
                     </div>
                   </td>
-                  <td className='py-3 px-6'>
+                  <td className='py-3 px-4 sm:px-6 hidden sm:table-cell'>
                     <div className='flex items-center gap-2'>
                       <span className='text-white font-medium'>
                         {habit.repsPerDay}
@@ -325,7 +380,7 @@ const HabitTracker = () => {
                       <span className='text-gray-400 text-sm'>times</span>
                     </div>
                   </td>
-                  <td className='py-3 px-6'>
+                  <td className='py-3 px-4 sm:px-6 hidden md:table-cell'>
                     <div className='flex items-center gap-2'>
                       <FaFire className='text-orange-500 flex-shrink-0' />
                       <span className='font-bold text-white'>
@@ -334,7 +389,7 @@ const HabitTracker = () => {
                       <span className='text-gray-400 text-sm'>days</span>
                     </div>
                   </td>
-                  <td className='py-3 px-6'>
+                  <td className='py-3 px-4 sm:px-6'>
                     <button
                       onClick={() => handleToggleComplete(habit.id)}
                       className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors flex-shrink-0 ${
@@ -351,7 +406,7 @@ const HabitTracker = () => {
                       {habit.completedToday ? <FaCheck /> : <FaTimes />}
                     </button>
                   </td>
-                  <td className='py-3 px-6'>
+                  <td className='py-3 px-4 sm:px-6'>
                     <div className='flex items-center gap-2'>
                       <button className='p-2 hover:bg-gray-700 rounded-lg transition-colors flex-shrink-0'>
                         <FaEdit className='text-blue-400 text-sm' />
@@ -375,7 +430,7 @@ const HabitTracker = () => {
         {/* Empty State - Show when not loading and no habits */}
         {!loading && habits.length === 0 && (
           <div className='w-full text-center py-12'>
-            <div className='inline-flex p-4 rounded-full bg-gray-800 mb-4'>
+            <div className='inline-flex p-4 rounded-full bg-gray-700 mb-4'>
               <FaPlus className='text-3xl text-gray-400' />
             </div>
             <h3 className='text-lg font-bold text-white mb-2'>No habits yet</h3>
@@ -384,7 +439,7 @@ const HabitTracker = () => {
             </p>
             <button
               onClick={() => setShowCreateModal(true)}
-              className='px-4 py-2 bg-blue-700 hover:bg-blue-600 rounded-lg font-medium flex items-center gap-2 mx-auto text-sm'
+              className='w-full px-4 py-2 bg-blue-700 hover:bg-blue-600 rounded-lg font-medium flex items-center gap-2 mx-auto text-sm max-w-xs'
             >
               <FaPlus />
               Add First Habit
@@ -405,8 +460,8 @@ const HabitTracker = () => {
 
       {/* Create Habit Modal - Full width on mobile */}
       {showCreateModal && (
-        <div className='fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50'>
-          <div className='bg-gray-800 rounded-xl border border-gray-700 w-full max-w-2xl'>
+        <div className='fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 w-full'>
+          <div className='w-full bg-gray-800 rounded-xl border border-gray-700 max-w-full sm:max-w-2xl mx-auto'>
             <div className='p-6'>
               <div className='flex items-center justify-between mb-6'>
                 <h2 className='text-xl font-bold text-white'>
