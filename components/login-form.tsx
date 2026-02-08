@@ -21,6 +21,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { signIn, signUp } from '@/app/lib/auth-client';
 
 interface AuthFormProps {
   variant: 'login' | 'signup';
@@ -57,50 +58,32 @@ export default function AuthForm({
     setIsLoading(true);
     try {
       if (isLogin) {
-        // Handle login with API
-        const response = await fetch('/api/auth/sign-in/email', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            email: data.email,
-            password: data.password,
-          }),
+        const result = await signIn.email({
+          email: data.email,
+          password: data.password,
         });
-        console.log(response);
-        const result = await response.json();
 
-        if (!response.ok || result.error) {
+        if (result.error) {
           setError('root', {
-            message: result.error?.message || 'Invalid email or password',
+            message: result.error.message || 'Invalid email or password',
           });
         } else {
           // Successful login - redirect to dashboard
           router.push('/dashboard');
         }
       } else {
-        // Handle signup with API
-        const response = await fetch('/api/auth/sign-up/email', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            email: data.email,
-            password: data.password,
-            name: data.name,
-          }),
+        const result = await signUp.email({
+          email: data.email,
+          password: data.password,
+          name: data.name,
         });
-        console.log(response);
-        const result = await response.json();
 
-        if (!response.ok || result.error) {
+        if (result.error) {
           setError('root', {
-            message: result.error?.message || 'Failed to create account',
+            message: result.error.message || 'Failed to create account',
           });
         } else {
-          // Successful signup - redirect to dashboard or login
+          // Successful signup - redirect to dashboard
           router.push('/dashboard');
         }
       }
